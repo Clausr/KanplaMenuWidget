@@ -6,16 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import dk.clausr.kanpla.data.KanplaMenuWidgetDataDefinition
 import dk.clausr.kanpla.data.SerializedWidgetState
-import dk.clausr.kanpla.model.MenuWidgetData
 import dk.clausr.kanpla.network.RetrofitClient
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -29,48 +25,27 @@ class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(
         initialValue = null
     )
 
-    private val moduleId = dataStore.data.map { it.widgetSettings.moduleId }
-        .distinctUntilChanged()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = null
-        )
-
-    val menu = moduleId
-        .mapNotNull { it?.ifBlank { null } }
-        .map { moduleId ->
-            val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(LocalDate.now())
-            RetrofitClient.retrofit.getMenu(moduleId, dateFormatted).let {
-                if (it.isSuccessful) {
-                    it.body()?.response
-                } else null
-            }
+    val menu = flow {
+        val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(LocalDate.now())
+        val result = RetrofitClient.retrofit.getMenu(dateFormatted).let {
+            if (it.isSuccessful) {
+                it.body()?.response
+            } else null
         }
-
-    fun setModuleId(moduleId: String) = viewModelScope.launch {
-        dataStore.updateData { oldData ->
-            SerializedWidgetState.Success(
-                MenuWidgetData(
-                    product = null,
-                    menu = null,
-                    lastUpdated = Instant.now()
-                ),
-                settings = oldData.widgetSettings.copy(moduleId = moduleId)
-            )
-        }
+        emit(result)
     }
 
-
-    fun setPreferredProduct(productId: String?) = viewModelScope.launch {
+    fun setPreferredProduct(productId: String) = viewModelScope.launch {
         dataStore.updateData { oldData ->
-            SerializedWidgetState.Success(
-                MenuWidgetData(
-                    product = null,
-                    menu = null,
-                    lastUpdated = Instant.now()
-                ),
-                settings = oldData.widgetSettings.copy(productId = productId)
+            val chosenProductIds = oldData.widgetSettings.productIds?.toMutableSet() ?: mutableSetOf()
+            if (chosenProductIds.contains(productId)) {
+                chosenProductIds.remove(productId)
+            } else {
+                chosenProductIds.add(productId)
+            }
+
+            SerializedWidgetState.Loading(
+                settings = oldData.widgetSettings.copy(productIds = chosenProductIds.toList())
             )
         }
     }

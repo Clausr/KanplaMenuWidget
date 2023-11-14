@@ -6,13 +6,17 @@ import java.time.Instant
 
 @Serializable
 data class MenuWidgetData(
-    val product: Product?,
-    val menu: Menu?,
+    val product: Product,
+    val menu: Menu,
+)
+
+@Serializable
+data class MenuWidgetDataList(
+    val dailyData: List<MenuWidgetData>,
     @Contextual val lastUpdated: Instant? = null,
 )
 
 @Serializable
 data class WidgetSettings(
-    val moduleId: String? = null,
-    val productId: String? = null,
+    val productIds: List<String>? = null,
 )

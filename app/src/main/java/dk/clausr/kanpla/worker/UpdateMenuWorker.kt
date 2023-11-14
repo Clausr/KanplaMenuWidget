@@ -1,6 +1,7 @@
 package dk.clausr.kanpla.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.glance.appwidget.updateAll
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -14,15 +15,17 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import dk.clausr.kanpla.data.KanplaMenuWidgetDataDefinition
 import dk.clausr.kanpla.data.SerializedWidgetState
 import dk.clausr.kanpla.model.MenuWidgetData
+import dk.clausr.kanpla.model.MenuWidgetDataList
 import dk.clausr.kanpla.network.RetrofitClient
-import dk.clausr.kanpla.data.KanplaMenuWidgetDataDefinition
 import dk.clausr.kanpla.widget.MenuOfTheDayWidget
 import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class UpdateMenuWorker(private val appContext: Context, private val workerParameters: WorkerParameters) : CoroutineWorker(appContext, workerParameters) {
@@ -38,21 +41,26 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
 
         MenuOfTheDayWidget.updateAll(appContext)
 
-        val todayOrNextWeekdayDate = getWeekdayDate()
+        val todayOrNextWeekdayDate = getDesiredDate()
 
-        val kanplaId = workerParameters.inputData.getString(KanplaIdKey) ?: return Result.failure()
-        val productId = workerParameters.inputData.getString(ProductIdKey) ?: return Result.failure()
+        val productIds = workerParameters.inputData.getStringArray(ProductIdKeys)?.toList() ?: return Result.failure()
+        Log.d("Worker", "productIds: ${productIds.joinToString { it }}")
+
         val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(todayOrNextWeekdayDate)
-        val result = RetrofitClient.retrofit.getMenu(kanplaId, dateFormatted)
+        val result = RetrofitClient.retrofit.getMenu(dateFormatted)
 
         when {
             result.isSuccessful && result.body() != null -> {
                 val response = result.body()!!.response
+
+                val dailyData = response.products.filter { it.id in productIds }.map { product ->
+                    MenuWidgetData(product, response.menus.first { it.productId == product.id })
+                }
+
                 dataStore.updateData { oldState ->
                     SerializedWidgetState.Success(
-                        MenuWidgetData(
-                            product = response.products.first { it.id == productId },
-                            menu = response.menus.first { it.productId == productId },
+                        data = MenuWidgetDataList(
+                            dailyData = dailyData,
                             lastUpdated = Instant.now(),
                         ),
                         settings = oldState.widgetSettings
@@ -72,35 +80,35 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
         return workerResult
     }
 
-    private fun getWeekdayDate(): LocalDate {
-        var date = LocalDate.now()
+    fun getDesiredDate(): LocalDate {
+        val now = LocalTime.now()
+        val today = LocalDate.now()
 
-        // Check if it's a weekend, and if so, move to the next weekday
-        while (date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY) {
-            date = date.plusDays(1)
+        return when {
+            now.isBefore(LocalTime.of(12, 0)) -> today
+            now.isAfter(LocalTime.of(12, 0)) -> today.plusDays(1)
+            today.dayOfWeek == DayOfWeek.SATURDAY -> today.plusDays(2)
+            today.dayOfWeek == DayOfWeek.SUNDAY -> today.plusDays(1)
+            else -> today
         }
-
-        return date
     }
 
     companion object {
-        const val KanplaIdKey = "kanplaIdKey"
-        const val ProductIdKey = "productIdKey"
+        const val ProductIdKeys = "productIdKeys"
         private const val updateMenuWorkerUniqueName = "UpdateMenuWorkerUniqueName"
 
-        fun startSingle(kanplaId: String, productId: String) = OneTimeWorkRequestBuilder<UpdateMenuWorker>()
+        fun startSingle(productIds: List<String>) = OneTimeWorkRequestBuilder<UpdateMenuWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setInputData(
                 workDataOf(
-                    KanplaIdKey to kanplaId,
-                    ProductIdKey to productId
+                    ProductIdKeys to productIds.toTypedArray()
                 )
             )
             .build()
 
-        fun enqueueUnique(context: Context, kanplaId: String, productId: String) {
-            WorkManager.getInstance(context).enqueueUniqueWork(updateMenuWorkerUniqueName, ExistingWorkPolicy.KEEP, startSingle(kanplaId, productId))
+        fun enqueueUnique(context: Context, productIds: List<String>) {
+            WorkManager.getInstance(context).enqueueUniqueWork(updateMenuWorkerUniqueName, ExistingWorkPolicy.KEEP, startSingle(productIds))
         }
 
         private const val periodicSync = "PeriodicSyncWorker"
@@ -110,9 +118,9 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
             .setRequiresBatteryNotLow(true)
             .build()
 
-        private fun periodicWorkSync(kanplaId: String, productId: String) =
+        private fun periodicWorkSync(productId: List<String>) =
             PeriodicWorkRequestBuilder<UpdateMenuWorker>(repeatInterval = Duration.ofHours(2))
-                .setInputData(workDataOf(KanplaIdKey to kanplaId, ProductIdKey to productId))
+                .setInputData(workDataOf(ProductIdKeys to productId.toTypedArray()))
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, Duration.ofMinutes(10))
                 .setInitialDelay(Duration.ofSeconds(10))
                 .setConstraints(periodicConstraints)
@@ -121,14 +129,13 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
         fun start(
             context: Context,
             policy: ExistingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.UPDATE,
-            kanplaId: String,
-            productId: String
+            productId: List<String>
         ) {
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
                     periodicSync,
                     policy,
-                    periodicWorkSync(kanplaId, productId)
+                    periodicWorkSync(productId)
                 )
         }
 

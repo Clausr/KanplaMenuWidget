@@ -19,6 +19,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    flavorDimensions += "FlavorDimension"
+    productFlavors {
+        create("dabba") {
+            dimension = "FlavorDimension"
+            applicationIdSuffix = ".dabba"
+            buildConfigField("String", "moduleId", "\"TEZBaxqzvLMQId4NigWh\"")
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
