@@ -119,7 +119,6 @@ class WidgetConfigurationActivity : ComponentActivity() {
                             }
 
                             if (data?.widgetSettings?.productIds?.isNotEmpty() == true) {
-
                                 data?.widgetSettings?.productIds?.let { productIds ->
                                     val todaysMenu = response?.menus?.filter { productIds.contains(it.productId) }
 

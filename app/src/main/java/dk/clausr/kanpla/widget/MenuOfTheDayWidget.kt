@@ -30,6 +30,7 @@ import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
+import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
@@ -52,8 +53,6 @@ import java.util.Locale
 
 object MenuOfTheDayWidget : GlanceAppWidget() {
     override var stateDefinition: GlanceStateDefinition<SerializedWidgetState> = KanplaMenuWidgetDataDefinition
-
-//    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
@@ -91,17 +90,18 @@ object MenuOfTheDayWidget : GlanceAppWidget() {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 itemsIndexed(state.data.dailyData) { index, it ->
-                    Column {
+                    Column(modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                         Text(
-                            modifier = GlanceModifier.defaultWeight().padding(horizontal = 8.dp),
+                            modifier = GlanceModifier.fillMaxWidth(),
                             text = it.menu.name.ifBlank { it.menu.productName },
-                            style = TextStyle(color = GlanceTheme.colors.onBackground, fontWeight = FontWeight.Bold)
+                            style = TextStyle(
+                                color = GlanceTheme.colors.onBackground,
+                                fontWeight = FontWeight.Bold
+                            )
                         )
 
                         Text(
-                            modifier = GlanceModifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp)
+                            modifier = GlanceModifier.fillMaxWidth()
                                 .padding(bottom = if (index != state.data.dailyData.size - 1) 8.dp else 0.dp),
                             text = it.menu.description,
                             style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = TextUnit(12f, TextUnitType.Sp))
@@ -111,17 +111,27 @@ object MenuOfTheDayWidget : GlanceAppWidget() {
             }
         }
 
-        Row(modifier = GlanceModifier.fillMaxWidth()) {
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val dateForMenu = state.data.dailyData.first().menu.date
 
+            Spacer(GlanceModifier.defaultWeight())
+
             Text(
-                modifier = GlanceModifier.defaultWeight().padding(end = 4.dp).padding(top = 4.dp),
+                modifier = GlanceModifier.padding(end = 2.dp),
                 text = dateForMenu.getDayOfWeekString().replaceFirstChar { it.uppercase() },
-                style = TextStyle(color = GlanceTheme.colors.onBackground, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
+                style = TextStyle(
+                    color = GlanceTheme.colors.onBackground,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                )
             )
 
             Image(
-                modifier = GlanceModifier.wrapContentHeight().padding(2.dp).clickable(actionRunCallback<RefreshAction>()),
+                modifier = GlanceModifier.wrapContentHeight().padding(2.dp)
+                    .clickable(actionRunCallback<RefreshAction>()),
                 provider = ImageProvider(R.drawable.refresh_24px),
                 contentDescription = "Refresh",
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.onBackground)
@@ -154,13 +164,10 @@ class RefreshAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-
         var chosenProductIds: List<String>? = null
-//        var chosenProductId: String? = null
 
         updateAppWidgetState(context, KanplaMenuWidgetDataDefinition, glanceId) { oldState ->
             chosenProductIds = oldState.widgetSettings.productIds
-//            chosenProductId = oldState.widgetSettings.productId
 
             SerializedWidgetState.Loading(oldState.widgetSettings)
         }

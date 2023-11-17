@@ -7,12 +7,12 @@ import androidx.lifecycle.viewModelScope
 import dk.clausr.kanpla.data.KanplaMenuWidgetDataDefinition
 import dk.clausr.kanpla.data.SerializedWidgetState
 import dk.clausr.kanpla.network.RetrofitClient
+import dk.clausr.kanpla.utils.getDesiredDate
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(application) {
@@ -26,7 +26,7 @@ class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(
     )
 
     val menu = flow {
-        val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(LocalDate.now())
+        val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(getDesiredDate())
         val result = RetrofitClient.retrofit.getMenu(dateFormatted).let {
             if (it.isSuccessful) {
                 it.body()?.response

@@ -20,15 +20,15 @@ import dk.clausr.kanpla.data.SerializedWidgetState
 import dk.clausr.kanpla.model.MenuWidgetData
 import dk.clausr.kanpla.model.MenuWidgetDataList
 import dk.clausr.kanpla.network.RetrofitClient
+import dk.clausr.kanpla.utils.getDesiredDate
 import dk.clausr.kanpla.widget.MenuOfTheDayWidget
-import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-class UpdateMenuWorker(private val appContext: Context, private val workerParameters: WorkerParameters) : CoroutineWorker(appContext, workerParameters) {
+class UpdateMenuWorker(
+    private val appContext: Context, private val workerParameters: WorkerParameters
+) : CoroutineWorker(appContext, workerParameters) {
 
     override suspend fun doWork(): Result {
         lateinit var workerResult: Result
@@ -43,7 +43,8 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
 
         val todayOrNextWeekdayDate = getDesiredDate()
 
-        val productIds = workerParameters.inputData.getStringArray(ProductIdKeys)?.toList() ?: return Result.failure()
+        val productIds = workerParameters.inputData.getStringArray(ProductIdKeys)?.toList()
+            ?: return Result.failure()
         Log.d("Worker", "productIds: ${productIds.joinToString { it }}")
 
         val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(todayOrNextWeekdayDate)
@@ -80,26 +81,15 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
         return workerResult
     }
 
-    fun getDesiredDate(): LocalDate {
-        val now = LocalTime.now()
-        val today = LocalDate.now()
-
-        return when {
-            now.isBefore(LocalTime.of(12, 0)) -> today
-            now.isAfter(LocalTime.of(12, 0)) -> today.plusDays(1)
-            today.dayOfWeek == DayOfWeek.SATURDAY -> today.plusDays(2)
-            today.dayOfWeek == DayOfWeek.SUNDAY -> today.plusDays(1)
-            else -> today
-        }
-    }
-
     companion object {
         const val ProductIdKeys = "productIdKeys"
         private const val updateMenuWorkerUniqueName = "UpdateMenuWorkerUniqueName"
 
-        fun startSingle(productIds: List<String>) = OneTimeWorkRequestBuilder<UpdateMenuWorker>()
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+        fun startSingle(productIds: List<String>) =
+            OneTimeWorkRequestBuilder<UpdateMenuWorker>().setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .setConstraints(
+                    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+                )
             .setInputData(
                 workDataOf(
                     ProductIdKeys to productIds.toTypedArray()
@@ -108,7 +98,9 @@ class UpdateMenuWorker(private val appContext: Context, private val workerParame
             .build()
 
         fun enqueueUnique(context: Context, productIds: List<String>) {
-            WorkManager.getInstance(context).enqueueUniqueWork(updateMenuWorkerUniqueName, ExistingWorkPolicy.KEEP, startSingle(productIds))
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                updateMenuWorkerUniqueName, ExistingWorkPolicy.KEEP, startSingle(productIds)
+            )
         }
 
         private const val periodicSync = "PeriodicSyncWorker"
