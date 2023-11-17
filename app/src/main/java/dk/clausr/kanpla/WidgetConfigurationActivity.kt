@@ -50,8 +50,7 @@ class WidgetConfigurationActivity : ComponentActivity() {
     }
 
     private val configurationViewModel: WidgetConfigurationViewModel by lazy {
-        ViewModelProvider.AndroidViewModelFactory.getInstance(application)
-            .create(WidgetConfigurationViewModel::class.java)
+        ViewModelProvider.AndroidViewModelFactory.getInstance(application).create(WidgetConfigurationViewModel::class.java)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,77 +88,64 @@ class WidgetConfigurationActivity : ComponentActivity() {
                             .padding(contentPadding)
                             .padding(horizontal = 16.dp)
                             .background(MaterialTheme.colorScheme.background)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         response?.products?.let { products ->
-                            val selectedProducts =
-                                products.filter { data?.widgetSettings?.productIds?.contains(it.id) == true }
+                            val selectedProducts = products.filter { data?.widgetSettings?.productIds?.contains(it.id) == true }
 
                             FlowRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(
-                                    8.dp, Alignment.CenterHorizontally
-                                )
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                             ) {
                                 products.forEach { product ->
-                                    FilterChip(selected = product in selectedProducts,
-                                        onClick = {
-                                            if (chosenProductIds.contains(product.id)) chosenProductIds -= product.id else chosenProductIds += product.id
-                                            configurationViewModel.setPreferredProduct(productId = product.id)
-                                        },
-                                        label = { Text(product.name.substringBefore('(').trim()) })
+                                    FilterChip(selected = product in selectedProducts, onClick = {
+                                        if (chosenProductIds.contains(product.id)) chosenProductIds -= product.id else chosenProductIds += product.id
+                                        configurationViewModel.setPreferredProduct(productId = product.id)
+                                    }, label = { Text(product.name.substringBefore('(').trim()) })
                                 }
                             }
 
-                            if (data?.widgetSettings?.productIds?.isNotEmpty() == true) {
-                                data?.widgetSettings?.productIds?.let { productIds ->
-                                    val todaysMenu =
-                                        response?.menus?.filter { productIds.contains(it.productId) }
+                            data?.widgetSettings?.productIds?.let { productIds ->
+                                val todaysMenu = response?.menus?.filter { productIds.contains(it.productId) }
 
-                                    Text(modifier = Modifier.padding(top = 16.dp),
-                                        text = "Menu for ${
-                                            todaysMenu?.firstOrNull()?.date?.getDayOfWeekString()
-                                                ?.replaceFirstChar { it.uppercase() }
-                                        }",
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                Text(
+                                    modifier = Modifier.padding(top = 16.dp),
+                                    text = "Menu for ${todaysMenu?.firstOrNull()?.date?.getDayOfWeekString()?.replaceFirstChar { it.uppercase() }}",
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                                )
 
-                                    todaysMenu?.forEach {
-                                        Column {
-                                            Text(
-                                                text = it.name.ifBlank { it.productName },
-                                                style = MaterialTheme.typography.labelLarge
-                                            )
-                                            Text(
-                                                text = it.description,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
+                                todaysMenu?.forEach {
+                                    Column {
+                                        Text(
+                                            text = it.productName, style = MaterialTheme.typography.labelLarge
+                                        )
+                                        Text(
+                                            text = it.name.ifBlank { it.productName }, style = MaterialTheme.typography.bodySmall
+                                        )
+
+                                        Text(
+                                            text = it.description, style = MaterialTheme.typography.bodySmall
+                                        )
                                     }
+                                }
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Button(onClick = {
-                                            val resultValue = Intent().putExtra(
-                                                AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
-                                            )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Button(onClick = {
+                                        val resultValue = Intent().putExtra(
+                                            AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId
+                                        )
 
-                                            setResult(Activity.RESULT_OK, resultValue)
+                                        setResult(Activity.RESULT_OK, resultValue)
 
-                                            UpdateMenuWorker.start(
-                                                this@WidgetConfigurationActivity,
-                                                productId = chosenProductIds.toList()
-                                            )
-                                            finish()
-                                        }) {
-                                            Text("Apply configuration")
-                                        }
+                                        UpdateMenuWorker.start(
+                                            this@WidgetConfigurationActivity, productId = chosenProductIds.toList()
+                                        )
+                                        finish()
+                                    }) {
+                                        Text("Apply configuration")
                                     }
-
                                 }
                             }
                         }
