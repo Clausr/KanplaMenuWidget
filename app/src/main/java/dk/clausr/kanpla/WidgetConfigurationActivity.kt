@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
+import dk.clausr.kanpla.extensions.productNameWithEmojis
 import dk.clausr.kanpla.ui.KanplaTheme
 import dk.clausr.kanpla.widget.getDayOfWeekString
 import dk.clausr.kanpla.worker.UpdateMenuWorker
@@ -98,10 +99,18 @@ class WidgetConfigurationActivity : ComponentActivity() {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                             ) {
                                 products.forEach { product ->
-                                    FilterChip(selected = product in selectedProducts, onClick = {
-                                        if (chosenProductIds.contains(product.id)) chosenProductIds -= product.id else chosenProductIds += product.id
-                                        configurationViewModel.setPreferredProduct(productId = product.id)
-                                    }, label = { Text(product.name.substringBefore('(').trim()) })
+                                    FilterChip(
+                                        selected = product in selectedProducts,
+                                        onClick = {
+                                            if (chosenProductIds.contains(product.id)) {
+                                                chosenProductIds -= product.id
+                                            } else {
+                                                chosenProductIds += product.id
+                                            }
+                                            configurationViewModel.setPreferredProduct(productId = product.id)
+                                        },
+                                        label = { Text(product.productNameWithEmojis) },
+                                    )
                                 }
                             }
 
@@ -117,7 +126,7 @@ class WidgetConfigurationActivity : ComponentActivity() {
                                 todaysMenu?.forEach {
                                     Column {
                                         Text(
-                                            text = it.productName, style = MaterialTheme.typography.labelLarge
+                                            text = it.productNameWithEmojis, style = MaterialTheme.typography.labelLarge
                                         )
                                         Text(
                                             text = it.name.ifBlank { it.productName }, style = MaterialTheme.typography.bodySmall

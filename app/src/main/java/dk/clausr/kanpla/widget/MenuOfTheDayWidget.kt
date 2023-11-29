@@ -43,6 +43,8 @@ import androidx.glance.text.TextStyle
 import dk.clausr.kanpla.R
 import dk.clausr.kanpla.data.KanplaMenuWidgetDataDefinition
 import dk.clausr.kanpla.data.SerializedWidgetState
+import dk.clausr.kanpla.extensions.productNameWithEmojis
+
 import dk.clausr.kanpla.worker.UpdateMenuWorker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -92,11 +94,8 @@ object MenuOfTheDayWidget : GlanceAppWidget() {
                 itemsIndexed(state.data.dailyData) { index, it ->
                     Column(modifier = GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                         Text(
-                            modifier = GlanceModifier.fillMaxWidth(),
-                            text = it.menu.name.ifBlank { it.menu.productName },
-                            style = TextStyle(
-                                color = GlanceTheme.colors.onBackground,
-                                fontWeight = FontWeight.Bold
+                            modifier = GlanceModifier.fillMaxWidth(), text = it.menu.productNameWithEmojis, style = TextStyle(
+                                color = GlanceTheme.colors.onBackground, fontWeight = FontWeight.Bold
                             )
                         )
 
