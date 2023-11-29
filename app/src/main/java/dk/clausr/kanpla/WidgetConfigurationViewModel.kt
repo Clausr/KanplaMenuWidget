@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(application) {
@@ -20,13 +21,12 @@ class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(
     private val dataStore: DataStore<SerializedWidgetState> = runBlocking { KanplaMenuWidgetDataDefinition.getDataStore(getApplication()) }
 
     val data = dataStore.data.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = null
+        scope = viewModelScope, started = SharingStarted.WhileSubscribed(5_000), initialValue = null
     )
 
     val menu = flow {
-        val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(getDesiredDate())
+        val dateFormatted =
+            DateTimeFormatter.ofPattern("dd-MM-yyyy").format(getDesiredDate(data.value?.widgetSettings?.tomorrowDataLookupTime ?: LocalTime.NOON))
         val result = RetrofitClient.retrofit.getMenu(dateFormatted).let {
             if (it.isSuccessful) {
                 it.body()?.response
@@ -34,6 +34,14 @@ class WidgetConfigurationViewModel(application: Application) : AndroidViewModel(
         }
         emit(result)
     }
+
+//    fun setTime() = viewModelScope.launch {
+//        dataStore.updateData { oldData ->
+//            SerializedWidgetState.Loading(
+//                settings = oldData.widgetSettings.copy(tomorrowDataLookupTime = LocalTime.NOON)
+//            )
+//        }
+//    }
 
     fun setPreferredProduct(productId: String) = viewModelScope.launch {
         dataStore.updateData { oldData ->

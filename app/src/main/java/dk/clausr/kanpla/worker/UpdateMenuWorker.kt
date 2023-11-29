@@ -24,6 +24,7 @@ import dk.clausr.kanpla.utils.getDesiredDate
 import dk.clausr.kanpla.widget.MenuOfTheDayWidget
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class UpdateMenuWorker(
@@ -35,16 +36,17 @@ class UpdateMenuWorker(
 
         val dataStore = KanplaMenuWidgetDataDefinition.getDataStore(appContext)
 
+        var splitTime: LocalTime = LocalTime.NOON
         dataStore.updateData { oldState ->
+            splitTime = oldState.widgetSettings.tomorrowDataLookupTime
             SerializedWidgetState.Loading(oldState.widgetSettings)
         }
 
         MenuOfTheDayWidget.updateAll(appContext)
 
-        val todayOrNextWeekdayDate = getDesiredDate()
+        val todayOrNextWeekdayDate = getDesiredDate(splitTime)
 
-        val productIds = workerParameters.inputData.getStringArray(ProductIdKeys)?.toList()
-            ?: return Result.failure()
+        val productIds = workerParameters.inputData.getStringArray(ProductIdKeys)?.toList() ?: return Result.failure()
         Log.d("Worker", "productIds: ${productIds.joinToString { it }}")
 
         val dateFormatted = DateTimeFormatter.ofPattern("dd-MM-yyyy").format(todayOrNextWeekdayDate)

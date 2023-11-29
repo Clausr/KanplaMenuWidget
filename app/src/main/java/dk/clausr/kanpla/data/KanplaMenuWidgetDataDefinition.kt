@@ -18,6 +18,7 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.time.Instant
+import java.time.LocalTime
 
 @OptIn(ExperimentalSerializationApi::class)
 
@@ -41,6 +42,7 @@ object KanplaMenuWidgetDataDefinition : GlanceStateDefinition<SerializedWidgetSt
         private val json = Json {
             serializersModule = SerializersModule {
                 contextual(Instant::class, InstantSerializer)
+                contextual(LocalTime::class, LocalTimeSerializer)
             }
         }
 

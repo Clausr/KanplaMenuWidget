@@ -3,6 +3,7 @@ package dk.clausr.kanpla.model
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import java.time.Instant
+import java.time.LocalTime
 
 @Serializable
 data class MenuWidgetData(
@@ -18,5 +19,5 @@ data class MenuWidgetDataList(
 
 @Serializable
 data class WidgetSettings(
-    val productIds: List<String>? = null,
+    val productIds: List<String>? = null, @Contextual val tomorrowDataLookupTime: LocalTime = LocalTime.of(12, 0)
 )

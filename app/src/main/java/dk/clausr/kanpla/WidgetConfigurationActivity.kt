@@ -91,6 +91,11 @@ class WidgetConfigurationActivity : ComponentActivity() {
                             .background(MaterialTheme.colorScheme.background)
                             .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+
+//                        Text("Time: ${data?.widgetSettings?.tomorrowDataLookupTime}", modifier = Modifier.clickable {
+//                            configurationViewModel.setTime()
+//                        })
+
                         response?.products?.let { products ->
                             val selectedProducts = products.filter { data?.widgetSettings?.productIds?.contains(it.id) == true }
 
@@ -117,11 +122,9 @@ class WidgetConfigurationActivity : ComponentActivity() {
                             data?.widgetSettings?.productIds?.let { productIds ->
                                 val todaysMenu = response?.menus?.filter { productIds.contains(it.productId) }
 
-                                Text(
-                                    modifier = Modifier.padding(top = 16.dp),
+                                Text(modifier = Modifier.padding(top = 16.dp),
                                     text = "Menu for ${todaysMenu?.firstOrNull()?.date?.getDayOfWeekString()?.replaceFirstChar { it.uppercase() }}",
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
 
                                 todaysMenu?.forEach {
                                     Column {
